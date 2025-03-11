@@ -33,4 +33,3 @@ ON UPDATE CASCADE ON DELETE CASCADE
 
 CREATE TABLE destinations (
 trip_id int(11) NOT NULL,
-giorgo kai prosk eiste karafles 
