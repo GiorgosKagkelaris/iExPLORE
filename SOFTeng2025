@@ -1,0 +1,35 @@
+CREATE DATABASE IF NOT EXISTS iExPLORE;
+
+USE iExPLORE;
+
+CREATE TABLE users (
+user_id int(11) NOT NULL,
+username varchar(255) NOT NULL,
+password varchar(255) NOT NULL,
+created_at timestamp NOT NULL DEFAULT current_timestamp()
+PRIMARY KEY(user_id),
+ON UPDATE CASCADE ON DELETE CASCADE
+)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE administrators(
+administrator_id int(11) NOT NULL,
+id int(11) NOT NULL,
+admin_role role ,
+username varchar(255) NOT NULL,
+password varchar(255) NOT NULL,
+PRIMARY KEY(administrator_id)
+FOREIGN KEY(id) REFERENCES users(user_id)
+ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE members (
+member_id int(11) NOT NULL,
+username varchar(255) NOT NULL,
+password int(11) NOT NULL,
+ON UPDATE CASCADE ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE destinations (
+trip_id int(11) NOT NULL,
