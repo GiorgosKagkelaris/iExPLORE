@@ -434,9 +434,9 @@ def show_dashboard(user):
     dashboard.title("Dashboard")
     dashboard.geometry("300x200")
 
-    tk.Label(dashboard, text=f"👤 Χρήστης: {user['username']}", font=("Arial", 14)).pack(pady=5)
-    tk.Label(dashboard, text=f"📧 Email: {user['email']}", font=("Arial", 12)).pack(pady=5)
-    tk.Label(dashboard, text=f"📅 Εγγραφή: {user['created_at']}", font=("Arial", 12)).pack(pady=5)
+    tk.Label(dashboard, text=f" Χρήστης: {user['username']}", font=("Arial", 14)).pack(pady=5)
+    tk.Label(dashboard, text=f" Email: {user['email']}", font=("Arial", 12)).pack(pady=5)
+    tk.Label(dashboard, text=f" Εγγραφή: {user['created_at']}", font=("Arial", 12)).pack(pady=5)
 
 # 🔹 Δημιουργία GUI με Tkinter
 root = tk.Tk()
