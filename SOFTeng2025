@@ -7,6 +7,7 @@ user_id int(11) NOT NULL,
 username varchar(255) NOT NULL,
 password varchar(255) NOT NULL,
 created_at timestamp NOT NULL DEFAULT current_timestamp()
+email varchar(255) NOT NULL,
 PRIMARY KEY(user_id),
 ON UPDATE CASCADE ON DELETE CASCADE
 )ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -33,8 +34,423 @@ ON UPDATE CASCADE ON DELETE CASCADE
 
 CREATE TABLE destinations (
 trip_id int(11) NOT NULL,
+destination_name VARCHAR(255) NOT NULL,
+description TEXT,
+price DECIMAL(10,2) NOT NULL,
+available_seats INT NOT NULL,
+start_date DATE NOT NULL,
+end_date DATE NOT NULL,
+PRIMARY KEY (trip_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
 CREATE TABLE booking(
+booking_id INT(11) NOT NULL AUTO_INCREMENT,
+user_id INT(11) NOT NULL,
+trip_id INT(11) NOT NULL,
+status ENUM('confirmed', 'pending', 'cancelled') NOT NULL DEFAULT 'pending',
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (booking_id),
+FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+
 CREATE TABLE TripPlan(
+plan_id INT(11) NOT NULL AUTO_INCREMENT,
+user_id INT(11) NOT NULL,
+trip_id INT(11) NOT NULL,
+itinerary TEXT NOT NULL,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (plan_id),
+FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
 CREATE TABLE TripReview(
+review_id INT(11) NOT NULL AUTO_INCREMENT,
+user_id INT(11) NOT NULL,
+trip_id INT(11) NOT NULL,
+rating INT CHECK(rating BETWEEN 1 AND 5),
+comment TEXT,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (review_id),
+FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
 CREATE TABLE TripApplication(
-CREATE TABLE  
+application_id INT(11) NOT NULL AUTO_INCREMENT,
+user_id INT(11) NOT NULL,
+trip_id INT(11) NOT NULL,
+status ENUM('approved', 'pending', 'rejected') NOT NULL DEFAULT 'pending',
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (application_id),
+FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE Notifications(
+notification_id INT(11) NOT NULL AUTO_INCREMENT,
+user_id INT(11) NOT NULL,
+message TEXT NOT NULL,
+status ENUM('read', 'unread') NOT NULL DEFAULT 'unread',
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+PRIMARY KEY (notification_id),
+FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+CREATE TABLE Preferences(
+preference_id INT(11) NOT NULL AUTO_INCREMENT,
+user_id INT(11) NOT NULL,
+preferred_destination VARCHAR(255),
+preferred_budget DECIMAL(10,2),
+PRIMARY KEY (preference_id),
+FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE Wishlist(
+wishlist_id INT(11) NOT NULL AUTO_INCREMENT,
+user_id INT(11) NOT NULL,
+trip_id INT(11) NOT NULL,
+PRIMARY KEY (wishlist_id),
+FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+CREATE TABLE Offers_and_Discounts(
+offer_id INT(11) NOT NULL AUTO_INCREMENT,
+trip_id INT(11) NOT NULL,
+discount_percentage DECIMAL(5,2) NOT NULL,
+valid_until DATE NOT NULL,
+PRIMARY KEY (offer_id),
+FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import mysql.connector
+
+def create_database():
+    conn = mysql.connector.connect(
+        host="localhost",
+        user="root",  # Αλλάξτε το αν έχετε διαφορετικό χρήστη
+        password="your_password"
+    )
+    cursor = conn.cursor()
+
+    # Δημιουργία βάσης δεδομένων
+    cursor.execute("CREATE DATABASE IF NOT EXISTS iExPLORE")
+    cursor.execute("USE iExPLORE")
+
+    # Πίνακας Users
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        user_id INT(11) NOT NULL AUTO_INCREMENT,
+        username VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        email VARCHAR(255) NOT NULL UNIQUE,
+        PRIMARY KEY (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας Administrators
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS administrators (
+        administrator_id INT(11) NOT NULL AUTO_INCREMENT,
+        id INT(11) NOT NULL,
+        admin_role ENUM('superadmin', 'moderator') NOT NULL,
+        username VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        PRIMARY KEY (administrator_id),
+        FOREIGN KEY (id) REFERENCES users(user_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας Members
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS members (
+        member_id INT(11) NOT NULL AUTO_INCREMENT,
+        username VARCHAR(255) NOT NULL UNIQUE,
+        password VARCHAR(255) NOT NULL,
+        PRIMARY KEY (member_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας Destinations
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS destinations (
+        trip_id INT(11) NOT NULL AUTO_INCREMENT,
+        destination_name VARCHAR(255) NOT NULL,
+        description TEXT,
+        price DECIMAL(10,2) NOT NULL,
+        available_seats INT NOT NULL,
+        start_date DATE NOT NULL,
+        end_date DATE NOT NULL,
+        PRIMARY KEY (trip_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας Booking
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS booking (
+        booking_id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) NOT NULL,
+        trip_id INT(11) NOT NULL,
+        status ENUM('confirmed', 'pending', 'cancelled') NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (booking_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας TripPlan
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS TripPlan (
+        plan_id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) NOT NULL,
+        trip_id INT(11) NOT NULL,
+        itinerary TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (plan_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας TripReview
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS TripReview (
+        review_id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) NOT NULL,
+        trip_id INT(11) NOT NULL,
+        rating INT CHECK(rating BETWEEN 1 AND 5),
+        comment TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (review_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας TripApplication
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS TripApplication (
+        application_id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) NOT NULL,
+        trip_id INT(11) NOT NULL,
+        status ENUM('approved', 'pending', 'rejected') NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (application_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας Notifications
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS Notifications (
+        notification_id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) NOT NULL,
+        message TEXT NOT NULL,
+        status ENUM('read', 'unread') NOT NULL DEFAULT 'unread',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (notification_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας Preferences
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS Preferences (
+        preference_id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) NOT NULL,
+        preferred_destination VARCHAR(255),
+        preferred_budget DECIMAL(10,2),
+        PRIMARY KEY (preference_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας Wishlist
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS Wishlist (
+        wishlist_id INT(11) NOT NULL AUTO_INCREMENT,
+        user_id INT(11) NOT NULL,
+        trip_id INT(11) NOT NULL,
+        PRIMARY KEY (wishlist_id),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    # Πίνακας Offers_and_Discounts
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS Offers_and_Discounts (
+        offer_id INT(11) NOT NULL AUTO_INCREMENT,
+        trip_id INT(11) NOT NULL,
+        discount_percentage DECIMAL(5,2) NOT NULL,
+        valid_until DATE NOT NULL,
+        PRIMARY KEY (offer_id),
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+    """)
+
+    conn.commit()
+    conn.close()
+    print("Database created successfully!")
+
+# Εκτέλεση του script
+if __name__ == "__main__":
+    create_database()
+
+#pip install mysql-connector-python
+
+
+
+import mysql.connector
+import bcrypt
+
+# Σύνδεση στη βάση δεδομένων
+def connect_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",  # Αλλαγή αν έχετε διαφορετικό χρήστη
+        password="your_password",
+        database="iExPLORE"
+    )
+
+# 🔹 Εγγραφή χρήστη
+def register(username, password, email):
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    # Hash του κωδικού
+    hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+    try:
+        cursor.execute("INSERT INTO users (username, password, email) VALUES (%s, %s, %s)", 
+                       (username, hashed_password, email))
+        conn.commit()
+        print(" Εγγραφή επιτυχής!")
+    except mysql.connector.Error as err:
+        print(f" Σφάλμα: {err}")
+    finally:
+        cursor.close()
+        conn.close()
+
+# 🔹 Σύνδεση χρήστη
+def login(username, password):
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+
+    if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
+        print(" Σύνδεση επιτυχής!")
+        return True
+    else:
+        print(" Λάθος στοιχεία σύνδεσης.")
+        return False
+
+    cursor.close()
+    conn.close()
+
+# Δοκιμές
+if __name__ == "__main__":
+    # Δοκιμή εγγραφής
+    register("testuser", "testpassword", "testuser@example.com")
+
+    # Δοκιμή σύνδεσης
+    login("testuser", "testpassword")
+
+
+#pip install bcrypt mysql-connector-python
+
+#Αν όλα δουλεύουν σωστά, θα εμφανιστούν μηνύματα όπως:
+Εγγραφή επιτυχής!
+Σύνδεση επιτυχής!
+
+
+
+import tkinter as tk
+from tkinter import messagebox
+import mysql.connector
+import bcrypt
+
+# 🔹 Σύνδεση στη βάση
+def connect_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="your_password",
+        database="iExPLORE"
+    )
+
+# 🔹 Έλεγχος σύνδεσης χρήστη
+def login():
+    username = username_entry.get()
+    password = password_entry.get()
+
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+    
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+
+    if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
+        messagebox.showinfo(" Επιτυχία", "Σύνδεση επιτυχής!")
+        show_dashboard(user)
+    else:
+        messagebox.showerror(" Σφάλμα", "Λάθος στοιχεία σύνδεσης.")
+
+    cursor.close()
+    conn.close()
+
+# 🔹 Εμφάνιση Dashboard
+def show_dashboard(user):
+    dashboard = tk.Toplevel(root)
+    dashboard.title("Dashboard")
+    dashboard.geometry("300x200")
+
+    tk.Label(dashboard, text=f"👤 Χρήστης: {user['username']}", font=("Arial", 14)).pack(pady=5)
+    tk.Label(dashboard, text=f"📧 Email: {user['email']}", font=("Arial", 12)).pack(pady=5)
+    tk.Label(dashboard, text=f"📅 Εγγραφή: {user['created_at']}", font=("Arial", 12)).pack(pady=5)
+
+# 🔹 Δημιουργία GUI με Tkinter
+root = tk.Tk()
+root.title("Σύνδεση")
+root.geometry("300x200")
+
+tk.Label(root, text="Όνομα χρήστη:").pack()
+username_entry = tk.Entry(root)
+username_entry.pack()
+
+tk.Label(root, text="Κωδικός:").pack()
+password_entry = tk.Entry(root, show="*")
+password_entry.pack()
+
+tk.Button(root, text="Σύνδεση", command=login).pack(pady=10)
+
+root.mainloop()
