@@ -133,20 +133,6 @@ FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import mysql.connector
 
 def create_database():
