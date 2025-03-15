@@ -187,6 +187,23 @@ CREATE TABLE travel_offers (
     FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- Πίνακας Συγχρονισμού Ημερολογίου
+CREATE TABLE calendar_sync (
+    sync_id INT AUTO_INCREMENT PRIMARY KEY,
+    booking_id INT NOT NULL,
+    user_id INT NOT NULL,
+    calendar_service ENUM('google_calendar', 'iCal') NOT NULL,  -- Υπηρεσία ημερολογίου
+    event_id VARCHAR(255) NOT NULL,  -- Το μοναδικό ID του event στο ημερολόγιο
+    sync_status ENUM('synchronized', 'pending', 'failed') NOT NULL DEFAULT 'pending',  -- Κατάσταση συγχρονισμού
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+
+
+
 
 
 
