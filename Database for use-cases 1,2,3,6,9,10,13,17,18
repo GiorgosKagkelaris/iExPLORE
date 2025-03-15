@@ -35,6 +35,7 @@ CREATE TABLE destinations (
     destination_name VARCHAR(255) NOT NULL,
     category ENUM('air', 'road', 'cruise') NOT NULL,
     description TEXT,
+
     price DECIMAL(10,2) NOT NULL CHECK(price >= 0),
     available_seats INT NOT NULL CHECK(available_seats >= 0),
     start_date DATE NOT NULL,
