@@ -3,7 +3,7 @@ import mysql.connector
 def create_database():
     conn = mysql.connector.connect(
         host="localhost",
-        user="root",  # Αλλάξτε το αν έχετε διαφορετικό χρήστη
+        user="root",
         password="your_password"
     )
     cursor = conn.cursor()
@@ -186,7 +186,7 @@ import bcrypt
 def connect_db():
     return mysql.connector.connect(
         host="localhost",
-        user="root",  # Αλλαγή αν έχετε διαφορετικό χρήστη
+        user="root", 
         password="your_password",
         database="iExPLORE"
     )
