@@ -385,7 +385,7 @@ from tkinter import messagebox
 import mysql.connector
 import bcrypt
 
-# 🔹 Σύνδεση στη βάση
+#  Σύνδεση στη βάση
 def connect_db():
     return mysql.connector.connect(
         host="localhost",
@@ -394,7 +394,7 @@ def connect_db():
         database="iExPLORE"
     )
 
-# 🔹 Έλεγχος σύνδεσης χρήστη
+#  Έλεγχος σύνδεσης χρήστη
 def login():
     username = username_entry.get()
     password = password_entry.get()
@@ -414,7 +414,7 @@ def login():
     cursor.close()
     conn.close()
 
-# 🔹 Εμφάνιση Dashboard
+#  Εμφάνιση Dashboard
 def show_dashboard(user):
     dashboard = tk.Toplevel(root)
     dashboard.title("Dashboard")
@@ -423,101 +423,6 @@ def show_dashboard(user):
     tk.Label(dashboard, text=f" Χρήστης: {user['username']}", font=("Arial", 14)).pack(pady=5)
     tk.Label(dashboard, text=f" Email: {user['email']}", font=("Arial", 12)).pack(pady=5)
     tk.Label(dashboard, text=f" Εγγραφή: {user['created_at']}", font=("Arial", 12)).pack(pady=5)
-
-# 🔹 Δημιουργία GUI με Tkinter
-root = tk.Tk()
-root.title("Σύνδεση")
-root.geometry("300x200")
-
-tk.Label(root, text="Όνομα χρήστη:").pack()
-username_entry = tk.Entry(root)
-username_entry.pack()
-
-tk.Label(root, text="Κωδικός:").pack()
-password_entry = tk.Entry(root, show="*")
-password_entry.pack()
-
-tk.Button(root, text="Σύνδεση", command=login).pack(pady=10)
-
-root.mainloop()
-
-
-
-
-ADMIN PANEL (Αν ο χρήστης εχει συνδεθεί ως admin)
-import tkinter as tk
-from tkinter import messagebox
-import mysql.connector
-import bcrypt
-
-# 🔹 Σύνδεση στη βάση δεδομένων
-def connect_db():
-    return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="your_password",
-        database="iExPLORE"
-    )
-
-# 🔹 Έλεγχος σύνδεσης χρήστη
-def login():
-    username = username_entry.get()
-    password = password_entry.get()
-
-    conn = connect_db()
-    cursor = conn.cursor(dictionary=True)
-
-    # 🔍 Ελέγχουμε αν ο χρήστης είναι Administrator ή απλός χρήστης
-    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
-    user = cursor.fetchone()
-
-    if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
-        messagebox.showinfo("Επιτυχία", "Σύνδεση επιτυχής!")
-        
-        # 🔎 Έλεγχος αν είναι διαχειριστής
-        cursor.execute("SELECT * FROM administrators WHERE id = %s", (user['user_id'],))
-        admin = cursor.fetchone()
-
-        if admin:
-            show_admin_panel(user)
-        else:
-            show_dashboard(user)
-
-    else:
-        messagebox.showerror(" Σφάλμα", "Λάθος στοιχεία σύνδεσης.")
-
-    cursor.close()
-    conn.close()
-
-# 🔹 Κανονικό Dashboard για απλούς χρήστες
-def show_dashboard(user):
-    dashboard = tk.Toplevel(root)
-    dashboard.title("Dashboard Χρήστη")
-    dashboard.geometry("300x200")
-
-    tk.Label(dashboard, text=f" Χρήστης: {user['username']}", font=("Arial", 14)).pack(pady=5)
-    tk.Label(dashboard, text=f" Email: {user['email']}", font=("Arial", 12)).pack(pady=5)
-    tk.Label(dashboard, text=f" Εγγραφή: {user['created_at']}", font=("Arial", 12)).pack(pady=5)
-
-#  Admin Panel για διαχειριστές
-def show_admin_panel(user):
-    admin_panel = tk.Toplevel(root)
-    admin_panel.title("🔧 Admin Panel")
-    admin_panel.geometry("400x300")
-
-    tk.Label(admin_panel, text=f" Διαχειριστής: {user['username']}", font=("Arial", 14, "bold")).pack(pady=5)
-
-    # Κουμπιά για λειτουργίες admin
-    tk.Button(admin_panel, text=" Διαχείριση Χρηστών", command=manage_users).pack(pady=5)
-    tk.Button(admin_panel, text=" Διαχείριση Ταξιδιών", command=manage_trips).pack(pady=5)
-
-#  Διαχείριση χρηστών
-def manage_users():
-    messagebox.showinfo("⚙️ Διαχείριση Χρηστών", "Εδώ μπορείς να διαχειριστείς τους χρήστες!")
-
-#  Διαχείριση ταξιδιών
-def manage_trips():
-    messagebox.showinfo(" Διαχείριση Ταξιδιών", "Εδώ μπορείς να διαχειριστείς τα ταξίδια!")
 
 #  Δημιουργία GUI με Tkinter
 root = tk.Tk()
@@ -536,8 +441,152 @@ tk.Button(root, text="Σύνδεση", command=login).pack(pady=10)
 
 root.mainloop()
 
+
+
+
+ADMIN PANEL admin_panel.py (Αν ο χρήστης εχει συνδεθεί ως admin)
+import tkinter as tk
+from tkinter import messagebox, ttk
+import mysql.connector
+
+# Σύνδεση στη ΒΔ
+def connect_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="your_password",
+        database="iExPLORE"
+    )
+
+# Εμφάνιση όλων των χρηστών
+def show_users():
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT user_id, username, email FROM users")
+    users = cursor.fetchall()
+    
+    user_list.delete(*user_list.get_children())  # Καθαρισμός λίστας
+    for user in users:
+        user_list.insert("", "end", values=user)
+    
+    cursor.close()
+    conn.close()
+
+# Διαγραφή χρήστη
+def delete_user():
+    selected_item = user_list.selection()
+    if not selected_item:
+        messagebox.showerror("Σφάλμα", "Επέλεξε έναν χρήστη!")
+        return
+    
+    user_id = user_list.item(selected_item, "values")[0]
+    
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM users WHERE user_id = %s", (user_id,))
+    conn.commit()
+    
+    cursor.close()
+    conn.close()
+    
+    messagebox.showinfo("Επιτυχία", "Ο χρήστης διαγράφηκε!")
+    show_users()
+
+# Προαγωγή σε Admin
+def promote_user():
+    selected_item = user_list.selection()
+    if not selected_item:
+        messagebox.showerror("Σφάλμα", "Επέλεξε έναν χρήστη!")
+        return
+    
+    user_id = user_list.item(selected_item, "values")[0]
+    
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("INSERT INTO administrators (user_id, role) VALUES (%s, 'manager')", (user_id,))
+    conn.commit()
+    
+    cursor.close()
+    conn.close()
+    
+    messagebox.showinfo("Επιτυχία", "Ο χρήστης έγινε Admin!")
+    show_users()
+
+# Εμφάνιση όλων των ταξιδιών
+def show_trips():
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT trip_id, destination_name, price FROM destinations")
+    trips = cursor.fetchall()
+    
+    trip_list.delete(*trip_list.get_children())  
+    for trip in trips:
+        trip_list.insert("", "end", values=trip)
+    
+    cursor.close()
+    conn.close()
+
+# Διαγραφή ταξιδιού
+def delete_trip():
+    selected_item = trip_list.selection()
+    if not selected_item:
+        messagebox.showerror("Σφάλμα", "Επέλεξε ένα ταξίδι!")
+        return
+    
+    trip_id = trip_list.item(selected_item, "values")[0]
+    
+    conn = connect_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM destinations WHERE trip_id = %s", (trip_id,))
+    conn.commit()
+    
+    cursor.close()
+    conn.close()
+
+    messagebox.showinfo("Επιτυχία", "Το ταξίδι διαγράφηκε!")
+    show_trips()
+
+# GUI Admin Panel
+admin_panel = tk.Tk()
+admin_panel.title("🔧 Admin Panel")
+admin_panel.geometry("600x500")
+
+# Πίνακας Χρηστών
+tk.Label(admin_panel, text="Διαχείριση Χρηστών", font=("Arial", 12, "bold")).pack(pady=5)
+user_list = ttk.Treeview(admin_panel, columns=("ID", "Username", "Email"), show="headings")
+user_list.heading("ID", text="ID")
+user_list.heading("Username", text="Username")
+user_list.heading("Email", text="Email")
+user_list.pack()
+
+tk.Button(admin_panel, text="Ανανέωση", command=show_users).pack(side="left", padx=10)
+tk.Button(admin_panel, text="Διαγραφή", command=delete_user).pack(side="left", padx=10)
+tk.Button(admin_panel, text="Προαγωγή σε Admin", command=promote_user).pack(side="left", padx=10)
+
+# Πίνακας Ταξιδιών
+tk.Label(admin_panel, text="Διαχείριση Ταξιδιών", font=("Arial", 12, "bold")).pack(pady=10)
+trip_list = ttk.Treeview(admin_panel, columns=("ID", "Destination", "Price"), show="headings")
+trip_list.heading("ID", text="ID")
+trip_list.heading("Destination", text="Προορισμός")
+trip_list.heading("Price", text="Τιμή (€)")
+trip_list.pack()
+
+tk.Button(admin_panel, text="Ανανέωση", command=show_trips).pack(side="left", padx=10)
+tk.Button(admin_panel, text="Διαγραφή", command=delete_trip).pack(side="left", padx=10)
+
+# Εκκίνηση GUI
+admin_panel.mainloop()
+
+
 Εγκαθιστούμε Τkinter :     pip install tk
 
-Τρέχουμε το dashboard.py :  python dashboard.py
+pip install mysql-connector-python tk
+
+Τρέχουμε το script :  python admin_panel.py
 
 
