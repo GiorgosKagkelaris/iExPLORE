@@ -418,7 +418,7 @@ def delete_trip():
 
 # GUI Admin Panel
 admin_panel = tk.Tk()
-admin_panel.title("🔧 Admin Panel")
+admin_panel.title("Admin Panel")
 admin_panel.geometry("600x500")
 
 # Πίνακας Χρηστών
@@ -446,6 +446,7 @@ tk.Button(admin_panel, text="Διαγραφή", command=delete_trip).pack(side="
 
 # Εκκίνηση GUI
 admin_panel.mainloop()
+
 
 
 Εγκαθιστούμε Τkinter :     pip install tk
