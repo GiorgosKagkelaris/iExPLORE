@@ -195,7 +195,7 @@ CREATE TABLE calendar_sync (
     user_id INT NOT NULL,
     calendar_service ENUM('google_calendar', 'iCal') NOT NULL,  -- Υπηρεσία ημερολογίου
     event_id VARCHAR(255) NOT NULL,  -- Το μοναδικό ID του event στο ημερολόγιο
-    sync_status ENUM('synchronized', 'pending', 'failed') NOT NULL DEFAULT 'pending',  -- Κατάσταση συγχρονισμού
+    sync_status ENUM('synchronized', 'pending', 'failed') NOT NULL DEFAULT 'pending',  
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
