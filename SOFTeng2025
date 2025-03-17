@@ -440,3 +440,104 @@ password_entry.pack()
 tk.Button(root, text="Σύνδεση", command=login).pack(pady=10)
 
 root.mainloop()
+
+
+
+
+ADMIN PANEL (Αν ο χρήστης εχει συνδεθεί ως admin)
+import tkinter as tk
+from tkinter import messagebox
+import mysql.connector
+import bcrypt
+
+# 🔹 Σύνδεση στη βάση δεδομένων
+def connect_db():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="your_password",
+        database="iExPLORE"
+    )
+
+# 🔹 Έλεγχος σύνδεσης χρήστη
+def login():
+    username = username_entry.get()
+    password = password_entry.get()
+
+    conn = connect_db()
+    cursor = conn.cursor(dictionary=True)
+
+    # 🔍 Ελέγχουμε αν ο χρήστης είναι Administrator ή απλός χρήστης
+    cursor.execute("SELECT * FROM users WHERE username = %s", (username,))
+    user = cursor.fetchone()
+
+    if user and bcrypt.checkpw(password.encode('utf-8'), user["password"].encode('utf-8')):
+        messagebox.showinfo("Επιτυχία", "Σύνδεση επιτυχής!")
+        
+        # 🔎 Έλεγχος αν είναι διαχειριστής
+        cursor.execute("SELECT * FROM administrators WHERE id = %s", (user['user_id'],))
+        admin = cursor.fetchone()
+
+        if admin:
+            show_admin_panel(user)
+        else:
+            show_dashboard(user)
+
+    else:
+        messagebox.showerror(" Σφάλμα", "Λάθος στοιχεία σύνδεσης.")
+
+    cursor.close()
+    conn.close()
+
+# 🔹 Κανονικό Dashboard για απλούς χρήστες
+def show_dashboard(user):
+    dashboard = tk.Toplevel(root)
+    dashboard.title("Dashboard Χρήστη")
+    dashboard.geometry("300x200")
+
+    tk.Label(dashboard, text=f" Χρήστης: {user['username']}", font=("Arial", 14)).pack(pady=5)
+    tk.Label(dashboard, text=f" Email: {user['email']}", font=("Arial", 12)).pack(pady=5)
+    tk.Label(dashboard, text=f" Εγγραφή: {user['created_at']}", font=("Arial", 12)).pack(pady=5)
+
+#  Admin Panel για διαχειριστές
+def show_admin_panel(user):
+    admin_panel = tk.Toplevel(root)
+    admin_panel.title("🔧 Admin Panel")
+    admin_panel.geometry("400x300")
+
+    tk.Label(admin_panel, text=f" Διαχειριστής: {user['username']}", font=("Arial", 14, "bold")).pack(pady=5)
+
+    # Κουμπιά για λειτουργίες admin
+    tk.Button(admin_panel, text=" Διαχείριση Χρηστών", command=manage_users).pack(pady=5)
+    tk.Button(admin_panel, text=" Διαχείριση Ταξιδιών", command=manage_trips).pack(pady=5)
+
+#  Διαχείριση χρηστών
+def manage_users():
+    messagebox.showinfo("⚙️ Διαχείριση Χρηστών", "Εδώ μπορείς να διαχειριστείς τους χρήστες!")
+
+#  Διαχείριση ταξιδιών
+def manage_trips():
+    messagebox.showinfo(" Διαχείριση Ταξιδιών", "Εδώ μπορείς να διαχειριστείς τα ταξίδια!")
+
+#  Δημιουργία GUI με Tkinter
+root = tk.Tk()
+root.title("Σύνδεση")
+root.geometry("300x200")
+
+tk.Label(root, text="Όνομα χρήστη:").pack()
+username_entry = tk.Entry(root)
+username_entry.pack()
+
+tk.Label(root, text="Κωδικός:").pack()
+password_entry = tk.Entry(root, show="*")
+password_entry.pack()
+
+tk.Button(root, text="Σύνδεση", command=login).pack(pady=10)
+
+root.mainloop()
+
+Εγκαθιστούμε Τkinter :     pip install tk
+
+Τρέχουμε το dashboard.py :  python dashboard.py
+
+
