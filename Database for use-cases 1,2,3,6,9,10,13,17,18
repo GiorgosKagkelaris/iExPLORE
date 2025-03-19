@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS iExPLORE;
-USE iExPLORE;
+CREATE DATABASE IF NOT EXISTS iexplore;
+USE iexplore;
 
 -- Πίνακας Χρηστών
 CREATE TABLE users (
