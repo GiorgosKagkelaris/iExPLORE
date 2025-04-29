@@ -37,13 +37,12 @@ CREATE TABLE destinations (
     destination_name VARCHAR(255) NOT NULL,
     category ENUM('air', 'road', 'cruise') NOT NULL,
     description TEXT,
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
     price DECIMAL(10,2) NOT NULL CHECK(price >= 0),
     available_seats INT NOT NULL CHECK(available_seats >= 0),
     start_date DATE NOT NULL,
     end_date DATE NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 -- Πίνακας Κρατήσεων
 CREATE TABLE bookings (
@@ -181,13 +180,16 @@ CREATE TABLE admin_content (
 -- Πίνακας Προσφορών και Εκπτώσεων
 CREATE TABLE travel_offers (
     offer_id INT(11) NOT NULL AUTO_INCREMENT,
+    trip_id INT NOT NULL,
     destination VARCHAR(100) NOT NULL,
     price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
     available_seats INT(11) NOT NULL CHECK (available_seats >= 0),
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
-    PRIMARY KEY (offer_id)
-);ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    PRIMARY KEY (offer_id),
+    FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 
 -- Πίνακας Συγχρονισμού Ημερολογίου
 CREATE TABLE calendar_sync (
@@ -201,6 +203,18 @@ CREATE TABLE calendar_sync (
     FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- Προσθέτουμε τη στήλη created_by
+ALTER TABLE travel_offers
+ADD COLUMN created_by INT NULL;
+
+-- Δημιουργούμε ξένο κλειδί προς τον πίνακα users
+ALTER TABLE travel_offers
+ADD CONSTRAINT fk_travel_offers_created_by
+FOREIGN KEY (created_by) REFERENCES users(user_id)
+ON DELETE SET NULL;
+
 
 
 
