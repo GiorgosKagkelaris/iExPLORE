@@ -9,30 +9,15 @@ import sys
 
 # --- Αρχικοποίηση Βάσης Δεδομένων ---
 def init_db():
-    conn = sqlite3.connect("travel.db")
+    conn = sqlite3.connect("iexplore.db")
     cursor = conn.cursor()
-
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS users (
-            user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            email TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL
-        )
-    ''')
-
-    # Προσθήκη demo χρήστη αν δεν υπάρχει
-    demo_password = bcrypt.hashpw("demo1234".encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
-    cursor.execute("INSERT OR IGNORE INTO users (user_id, username, email, password_hash) VALUES (?, ?, ?, ?)",
-                   (1, "demo_user", "demo@example.com", demo_password))
-
     conn.commit()
     conn.close()
 
 
 # --- Εγγραφή Χρήστη ---
 def register_user(username, email, password):
-    conn = sqlite3.connect("travel.db")
+    conn = sqlite3.connect("iexplore.db")
     cursor = conn.cursor()
     hashed_password = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
@@ -49,7 +34,7 @@ def register_user(username, email, password):
 
 # --- Σύνδεση Χρήστη ---
 def login_user(username, password):
-    conn = sqlite3.connect("travel.db")
+    conn = sqlite3.connect("iexplore.db")
     cursor = conn.cursor()
 
     cursor.execute("SELECT user_id, password_hash FROM users WHERE username = ?", (username,))
@@ -61,7 +46,7 @@ def login_user(username, password):
 
         # Εκκίνηση του user_dashboard.py
         try:
-            subprocess.Popen([sys.executable, "user_dashboard.py"])
+            subprocess.Popen([sys.executable, "user_dashboard.py", str(user[0])])
             tk._default_root.destroy()  # Κλείνει το παράθυρο login
         except Exception as e:
             messagebox.showerror("Σφάλμα", f"Αποτυχία εκκίνησης user_dashboard.py:\n{e}")
