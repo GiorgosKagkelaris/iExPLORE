@@ -43,18 +43,6 @@ CREATE TABLE destinations (
     end_date DATE NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
-
--- Πίνακας Κρατήσεων
-CREATE TABLE bookings (
-    booking_id INT(11) NOT NULL AUTO_INCREMENT,
-    user_id INT(11) NOT NULL,
-    offer_id INT(11) NOT NULL,
-    status ENUM('pending', 'confirmed', 'cancelled') NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (booking_id),
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (offer_id) REFERENCES travel_offers(offer_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 -- Πίνακας Πληρωμών
 CREATE TABLE payments (
     payment_id INT AUTO_INCREMENT PRIMARY KEY,
@@ -175,6 +163,18 @@ CREATE TABLE admin_content (
     description TEXT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (admin_id) REFERENCES administrators(admin_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Πίνακας Κρατήσεων
+CREATE TABLE bookings (
+    booking_id INT(11) NOT NULL AUTO_INCREMENT,
+    user_id INT(11) NOT NULL,
+    offer_id INT(11) NOT NULL,
+    status ENUM('pending', 'confirmed', 'cancelled') NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (booking_id),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (offer_id) REFERENCES travel_offers(offer_id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- Πίνακας Προσφορών και Εκπτώσεων
