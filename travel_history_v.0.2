@@ -5,10 +5,9 @@ from tkinter import messagebox
 import subprocess
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-import os
 import webbrowser
 
-
+# --- Λήψη ιστορικού ταξιδιών ---
 def fetch_user_travel_history(user_id):
     conn = sqlite3.connect("iexplore.db")
     cursor = conn.cursor()
@@ -31,23 +30,7 @@ def fetch_user_travel_history(user_id):
     conn.close()
     return history
 
-
-def fetch_reviews_for_trip(trip_id):
-    conn = sqlite3.connect("iexplore.db")
-    cursor = conn.cursor()
-
-    cursor.execute("""
-        SELECT r.rating, r.comment, u.username
-        FROM trip_reviews r
-        JOIN users u ON r.user_id = u.user_id
-        WHERE r.trip_id = ?
-    """, (trip_id,))
-
-    reviews = cursor.fetchall()
-    conn.close()
-    return reviews
-
-
+# --- Καταχώρηση αξιολόγησης ---
 def submit_review(user_id, trip_id, rating, comment):
     conn = sqlite3.connect("iexplore.db")
     cursor = conn.cursor()
@@ -59,131 +42,109 @@ def submit_review(user_id, trip_id, rating, comment):
         """, (user_id, trip_id, rating, comment))
         conn.commit()
         messagebox.showinfo("Επιτυχία", "Η αξιολόγηση καταχωρήθηκε επιτυχώς!")
-        generate_pdf(user_id, trip_id, rating, comment)  # Δημιουργία PDF
+        generate_pdf(user_id, trip_id, rating, comment)
     except sqlite3.Error as e:
-        messagebox.showerror("Σφάλμα", f"Σφάλμα κατά την καταχώρηση αξιολόγησης: {e}")
+        messagebox.showerror("Σφάλμα", f"Σφάλμα αξιολόγησης: {e}")
     finally:
         conn.close()
 
-
+# --- Δημιουργία PDF αξιολόγησης ---
 def generate_pdf(user_id, trip_id, rating, comment):
-    # Λήψη δεδομένων του ταξιδιού για το PDF
     conn = sqlite3.connect("iexplore.db")
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT t.destination, t.start_date, t.end_date
-        FROM travel_offers t
-        WHERE t.trip_id = ?
+        SELECT destination, start_date, end_date
+        FROM travel_offers
+        WHERE trip_id = ?
     """, (trip_id,))
-    trip_data = cursor.fetchone()
+    trip = cursor.fetchone()
     conn.close()
 
-    destination = trip_data[0]
-    start_date = trip_data[1]
-    end_date = trip_data[2]
+    if not trip:
+        return
 
-    # Δημιουργία PDF
+    destination, start, end = trip
     filename = f"review_{user_id}_{trip_id}.pdf"
     c = canvas.Canvas(filename, pagesize=letter)
 
     c.setFont("Helvetica", 12)
     c.drawString(100, 750, f"Αξιολόγηση Ταξιδιού: {destination}")
-    c.drawString(100, 730, f"Ημερομηνία Έναρξης: {start_date}")
-    c.drawString(100, 710, f"Ημερομηνία Λήξης: {end_date}")
+    c.drawString(100, 730, f"Από: {start}")
+    c.drawString(100, 710, f"Έως: {end}")
     c.drawString(100, 690, f"Βαθμολογία: {rating} Αστέρια")
     c.drawString(100, 670, f"Σχόλιο: {comment}")
-
     c.save()
 
-    # Άνοιγμα του PDF με την προεπιλεγμένη εφαρμογή του χρήστη
     webbrowser.open(filename)
 
-
+# --- Κύρια κλάση Ιστορικού ---
 class TravelHistoryApp:
     def __init__(self, root, user_id):
         self.root = root
-        self.root.title("📖 Ιστορικό Ταξιδιών")
-        self.root.geometry("700x500")
         self.user_id = user_id
+        self.root.title("📖 Ιστορικό Ταξιδιών")
+        self.root.geometry("750x500")
+        self.show_history()
 
-        self.display_travel_history()
-
-    def display_travel_history(self):
+    def show_history(self):
         history = fetch_user_travel_history(self.user_id)
 
         if not history:
-            tk.Label(self.root, text="Δεν υπάρχουν καταχωρημένα ταξίδια.",
-                     font=("Arial", 14)).pack(pady=20)
+            tk.Label(self.root, text="Δεν υπάρχουν ταξίδια.", font=("Arial", 14)).pack(pady=20)
             return
 
-        tk.Label(self.root, text="Ταξίδια που έχεις κάνει κράτηση:", font=("Arial", 16, "bold")).pack(pady=10)
-
+        tk.Label(self.root, text="Ταξίδια που έχεις κάνει:", font=("Arial", 16, "bold")).pack(pady=10)
         frame = tk.Frame(self.root)
-        frame.pack(pady=10)
+        frame.pack()
 
-        headers = ["Προορισμός", "Έναρξη", "Λήξη", "Τιμή (€)", "Κατάσταση", "Αξιολόγηση"]
-        for col, header in enumerate(headers):
-            tk.Label(frame, text=header, font=("Arial", 10, "bold"), width=15, borderwidth=1, relief="solid").grid(
-                row=0, column=col)
+        headers = ["Προορισμός", "Έναρξη", "Λήξη", "Τιμή", "Κατάσταση", "Αξιολόγηση"]
+        for i, h in enumerate(headers):
+            tk.Label(frame, text=h, font=("Arial", 10, "bold"), width=15, borderwidth=1, relief="solid").grid(row=0, column=i)
 
-        for row_idx, (trip_id, destination, start_date, end_date, price, status) in enumerate(history, start=1):
-            tk.Label(frame, text=destination, width=15, borderwidth=1, relief="solid").grid(row=row_idx, column=0)
-            tk.Label(frame, text=start_date, width=15, borderwidth=1, relief="solid").grid(row=row_idx, column=1)
-            tk.Label(frame, text=end_date, width=15, borderwidth=1, relief="solid").grid(row=row_idx, column=2)
+        for row_idx, (trip_id, dest, start, end, price, status) in enumerate(history, start=1):
+            tk.Label(frame, text=dest, width=15, borderwidth=1, relief="solid").grid(row=row_idx, column=0)
+            tk.Label(frame, text=start, width=15, borderwidth=1, relief="solid").grid(row=row_idx, column=1)
+            tk.Label(frame, text=end, width=15, borderwidth=1, relief="solid").grid(row=row_idx, column=2)
             tk.Label(frame, text=f"{price:.2f} €", width=15, borderwidth=1, relief="solid").grid(row=row_idx, column=3)
             tk.Label(frame, text=status, width=15, borderwidth=1, relief="solid").grid(row=row_idx, column=4)
 
-            review_button = tk.Button(frame, text="Αξιολόγηση", width=15,
-                                      command=lambda trip_id=trip_id: self.show_review_form(trip_id))
-            review_button.grid(row=row_idx, column=5)
+            btn = tk.Button(frame, text="Αξιολόγηση", width=15,
+                            command=lambda trip_id=trip_id: self.open_review_form(trip_id))
+            btn.grid(row=row_idx, column=5)
 
-        # Προσθήκη κουμπιού επιστροφής στο κεντρικό μενού
-        back_button = tk.Button(self.root, text="Επιστροφή στο Κεντρικό Μενού", command=self.return_to_dashboard)
-        back_button.pack(pady=20)
+    def open_review_form(self, trip_id):
+        win = tk.Toplevel(self.root)
+        win.title("Αξιολόγηση Ταξιδιού")
+        tk.Label(win, text="Αστέρια (1-5):").pack(pady=5)
 
-    def show_review_form(self, trip_id):
-        review_window = tk.Toplevel(self.root)
-        review_window.title("Αξιολόγηση Ταξιδιού")
-
-        tk.Label(review_window, text="Αξιολόγησε το ταξίδι (1-5 αστέρια):").pack(pady=10)
-
-        rating_var = tk.IntVar()
-        rating_var.set(1)
-
+        rating_var = tk.IntVar(value=5)
         for i in range(1, 6):
-            tk.Radiobutton(review_window, text=f"{i} Αστέρια", variable=rating_var, value=i).pack()
+            tk.Radiobutton(win, text=str(i), variable=rating_var, value=i).pack()
 
-        tk.Label(review_window, text="Σχόλια:").pack(pady=10)
-        comment_entry = tk.Entry(review_window, width=50)
+        tk.Label(win, text="Σχόλιο:").pack(pady=5)
+        comment_entry = tk.Entry(win, width=50)
         comment_entry.pack(pady=5)
 
-        def submit_review_action():
+        def submit():
             rating = rating_var.get()
             comment = comment_entry.get()
             submit_review(self.user_id, trip_id, rating, comment)
-            review_window.destroy()
-            self.display_travel_history()
+            win.destroy()
 
-        tk.Button(review_window, text="Υποβολή", command=submit_review_action).pack(pady=10)
-        tk.Button(review_window, text="Ακύρωση", command=review_window.destroy).pack(pady=5)
+        tk.Button(win, text="Υποβολή", command=submit).pack(pady=10)
 
-    def return_to_dashboard(self):
-        try:
-            subprocess.Popen([sys.executable, "user_dashboard.py"])  # Εκκίνηση του user_dashboard.py
-            self.root.destroy()  # Κλείσιμο του παραθύρου travel_history.py
-        except Exception as e:
-            messagebox.showerror("Σφάλμα", f"Αποτυχία εκκίνησης του κεντρικού μενού:\n{e}")
-
-
+# --- Εκκίνηση προγράμματος ---
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        messagebox.showerror("Σφάλμα", "Απαιτείται user_id για το ιστορικό.")
+        tk.Tk().withdraw()
+        messagebox.showerror("Σφάλμα", "Απαιτείται user_id.")
         sys.exit(1)
 
     try:
         user_id = int(sys.argv[1])
     except ValueError:
-        messagebox.showerror("Σφάλμα", "Μη έγκυρο user_id!")
+        tk.Tk().withdraw()
+        messagebox.showerror("Σφάλμα", "Μη έγκυρο user_id.")
         sys.exit(1)
 
     root = tk.Tk()
