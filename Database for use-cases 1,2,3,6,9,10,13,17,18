@@ -1,294 +1,259 @@
-CREATE DATABASE IF NOT EXISTS iexplore;
-USE iexplore;
+import sqlite3
 
--- Πίνακας Χρηστών
-CREATE TABLE  users (
-    user_id INT(11) NOT NULL AUTO_INCREMENT,
-    username VARCHAR(50) NOT NULL UNIQUE,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    password_hash VARCHAR(255) NOT NULL,
-    role ENUM('user', 'admin') NOT NULL DEFAULT 'user',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (user_id)
-)ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+def init_db():
+    conn = sqlite3.connect("iexplore.db")
+    cursor = conn.cursor()
 
--- Πίνακας Διαχειριστών
-CREATE TABLE  administrators (
-    administrator_id INT(11) NOT NULL AUTO_INCREMENT,
-    user_id INT(11) NOT NULL,
-    admin_role ENUM('superadmin', 'moderator') NOT NULL,
-    PRIMARY KEY (administrator_id),
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    cursor.execute("PRAGMA foreign_keys = ON;")
 
+    schema_sqlite = """
+    CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT CHECK(role IN ('user', 'admin')) DEFAULT 'user',
+        created_at TEXT DEFAULT (datetime('now'))
+    );
 
--- Πίνακας Μελών
-CREATE TABLE members (
-    member_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    membership_type ENUM('standard', 'premium') NOT NULL DEFAULT 'standard',
-    join_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS administrators (
+        administrator_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        admin_role TEXT CHECK(admin_role IN ('superadmin', 'moderator')) NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Ταξιδιών
-CREATE TABLE destinations (
-    trip_id INT AUTO_INCREMENT PRIMARY KEY,
-    destination_name VARCHAR(255) NOT NULL,
-    category ENUM('air', 'road', 'cruise') NOT NULL,
-    description TEXT,
-    price DECIMAL(10,2) NOT NULL CHECK(price >= 0),
-    available_seats INT NOT NULL CHECK(available_seats >= 0),
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS members (
+        member_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        membership_type TEXT CHECK(membership_type IN ('standard', 'premium')) DEFAULT 'standard',
+        join_date TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Πληρωμών
-CREATE TABLE payments (
-    payment_id INT AUTO_INCREMENT PRIMARY KEY,
-    booking_id INT NOT NULL,
-    amount DECIMAL(10,2) NOT NULL CHECK(amount >= 0),
-    payment_status ENUM('paid', 'pending', 'failed') NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS destinations (
+        trip_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        destination_name TEXT NOT NULL,
+        category TEXT CHECK(category IN ('air', 'road', 'cruise')) NOT NULL,
+        description TEXT,
+        price REAL NOT NULL CHECK(price >= 0),
+        available_seats INTEGER NOT NULL CHECK(available_seats >= 0),
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL
+    );
 
--- Πίνακας Wishlist
-CREATE TABLE wishlist (
-    wishlist_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    trip_id INT NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS travel_offers (
+        offer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id INTEGER NOT NULL,
+        destination TEXT NOT NULL,
+        price REAL NOT NULL CHECK (price >= 0),
+        available_seats INTEGER NOT NULL CHECK (available_seats >= 0),
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        created_by INTEGER,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL
+    );
 
--- Πίνακας Αξιολογήσεων
-CREATE TABLE trip_reviews (
-    review_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    trip_id INT NOT NULL,
-    rating ENUM('1', '2', '3', '4', '5') NOT NULL,
-    comment TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS bookings (
+        booking_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        offer_id INTEGER NOT NULL,
+        status TEXT CHECK(status IN ('pending', 'confirmed', 'cancelled')) DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (offer_id) REFERENCES travel_offers(offer_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Ταξιδιωτικών Πλάνων
-CREATE TABLE travel_plans (
-    plan_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    destination VARCHAR(255) NOT NULL,
-    start_date DATE NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS payments (
+        payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER NOT NULL,
+        amount REAL NOT NULL CHECK(amount >= 0),
+        payment_status TEXT CHECK(payment_status IN ('paid', 'pending', 'failed')) DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Ομαδικών Ταξιδιών
-CREATE TABLE group_trips (
-    group_id INT AUTO_INCREMENT PRIMARY KEY,
-    organizer_id INT NOT NULL,
-    destination VARCHAR(255) NOT NULL,
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    cost_per_person DECIMAL(10,2) NOT NULL CHECK(cost_per_person >= 0),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (organizer_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS wishlist (
+        wishlist_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        trip_id INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Συμμετεχόντων σε Ομαδικά Ταξίδια
-CREATE TABLE group_trip_members (
-    group_member_id INT AUTO_INCREMENT PRIMARY KEY,
-    group_id INT NOT NULL,
-    user_id INT NOT NULL,
-    status ENUM('invited', 'confirmed', 'declined') NOT NULL DEFAULT 'invited',
-    FOREIGN KEY (group_id) REFERENCES group_trips(group_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS trip_reviews (
+        review_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        trip_id INTEGER NOT NULL,
+        rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
+        comment TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Προσωπικών Προτιμήσεων
-CREATE TABLE user_preferences (
-    preference_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    preferred_destinations TEXT,
-    dietary_preferences TEXT,
-    accommodation_type ENUM('hotel', 'hostel', 'apartment', 'resort') DEFAULT 'hotel',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS travel_plans (
+        plan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        destination TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Δημοσιεύσεων Ταξιδιωτικών Εμπειριών
-CREATE TABLE travel_posts (
-    post_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    trip_id INT NOT NULL,
-    content TEXT NOT NULL,
-    image_url VARCHAR(255),
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS group_trips (
+        group_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organizer_id INTEGER NOT NULL,
+        destination TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        cost_per_person REAL NOT NULL CHECK(cost_per_person >= 0),
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (organizer_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Likes & Σχολίων σε Δημοσιεύσεις
-CREATE TABLE post_interactions (
-    interaction_id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    user_id INT NOT NULL,
-    type ENUM('like', 'comment') NOT NULL,
-    comment_text TEXT,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES travel_posts(post_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS group_trip_members (
+        group_member_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        status TEXT CHECK(status IN ('invited', 'confirmed', 'declined')) DEFAULT 'invited',
+        FOREIGN KEY (group_id) REFERENCES group_trips(group_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Αναφορών Περιεχομένου
-CREATE TABLE content_reports (
-    report_id INT AUTO_INCREMENT PRIMARY KEY,
-    post_id INT NOT NULL,
-    reported_by INT NOT NULL,
-    reason TEXT NOT NULL,
-    status ENUM('pending', 'reviewed', 'resolved') DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (post_id) REFERENCES travel_posts(post_id) ON DELETE CASCADE,
-    FOREIGN KEY (reported_by) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS user_preferences (
+        preference_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        preferred_destinations TEXT,
+        dietary_preferences TEXT,
+        accommodation_type TEXT CHECK(accommodation_type IN ('hotel', 'hostel', 'apartment', 'resort')) DEFAULT 'hotel',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Προσθήκης Περιεχομένου από Διαχειριστές
-CREATE TABLE admin_content (
-    content_id INT AUTO_INCREMENT PRIMARY KEY,
-    admin_id INT NOT NULL,
-    type ENUM('destination', 'activity', 'offer', 'guide') NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    description TEXT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (admin_id) REFERENCES administrators(admin_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS travel_posts (
+        post_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        trip_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        image_url TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Κρατήσεων
-CREATE TABLE bookings (
-    booking_id INT(11) NOT NULL AUTO_INCREMENT,
-    user_id INT(11) NOT NULL,
-    offer_id INT(11) NOT NULL,
-    status ENUM('pending', 'confirmed', 'cancelled') NOT NULL DEFAULT 'pending',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (booking_id),
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    FOREIGN KEY (offer_id) REFERENCES travel_offers(offer_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS post_interactions (
+        interaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        type TEXT CHECK(type IN ('like', 'comment')) NOT NULL,
+        comment_text TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (post_id) REFERENCES travel_posts(post_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Προσφορών και Εκπτώσεων
-CREATE TABLE travel_offers (
-    offer_id INT(11) NOT NULL AUTO_INCREMENT,
-    trip_id INT NOT NULL,
-    destination VARCHAR(100) NOT NULL,
-    price DECIMAL(10,2) NOT NULL CHECK (price >= 0),
-    available_seats INT(11) NOT NULL CHECK (available_seats >= 0),
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    PRIMARY KEY (offer_id),
-    FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+    CREATE TABLE IF NOT EXISTS content_reports (
+        report_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL,
+        reported_by INTEGER NOT NULL,
+        reason TEXT NOT NULL,
+        status TEXT CHECK(status IN ('pending', 'reviewed', 'resolved')) DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (post_id) REFERENCES travel_posts(post_id) ON DELETE CASCADE,
+        FOREIGN KEY (reported_by) REFERENCES users(user_id) ON DELETE CASCADE
+    );
 
+    CREATE TABLE IF NOT EXISTS admin_content (
+        content_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin_id INTEGER NOT NULL,
+        type TEXT CHECK(type IN ('destination', 'activity', 'offer', 'guide')) NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (admin_id) REFERENCES administrators(administrator_id) ON DELETE CASCADE
+    );
 
--- Πίνακας Συγχρονισμού Ημερολογίου
-CREATE TABLE calendar_sync (
-    sync_id INT AUTO_INCREMENT PRIMARY KEY,
-    booking_id INT NOT NULL,
-    user_id INT NOT NULL,
-    calendar_service ENUM('google_calendar', 'iCal') NOT NULL,  -- Υπηρεσία ημερολογίου
-    event_id VARCHAR(255) NOT NULL,  -- Το μοναδικό ID του event στο ημερολόγιο
-    sync_status ENUM('synchronized', 'pending', 'failed') NOT NULL DEFAULT 'pending',  
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-
-
--- Προσθέτουμε τη στήλη created_by
-ALTER TABLE travel_offers
-ADD COLUMN created_by INT NULL;
-
--- Δημιουργούμε ξένο κλειδί προς τον πίνακα users
-ALTER TABLE travel_offers
-ADD CONSTRAINT fk_travel_offers_created_by
-FOREIGN KEY (created_by) REFERENCES users(user_id)
-ON DELETE SET NULL;
-
-CREATE TABLE notifications (
-    notification_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
+    CREATE TABLE IF NOT EXISTS calendar_sync (
+        sync_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        calendar_service TEXT CHECK(calendar_service IN ('google_calendar', 'iCal')) NOT NULL,
+        event_id TEXT NOT NULL,
+        sync_status TEXT CHECK(sync_status IN ('synchronized', 'pending', 'failed')) DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+    
+    CREATE TABLE notifications (
+    notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
     message TEXT NOT NULL,
-    type ENUM('reminder', 'offer', 'alert', 'system') NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    type TEXT CHECK(type IN ('reminder', 'offer', 'alert', 'system')) NOT NULL,
+    is_read INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+);
 
-
--- Για να συνδέεις χρήστες με προορισμούς που ενδιαφέρονται:
 CREATE TABLE user_interests (
-    interest_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    destination_id INT NOT NULL,
+    interest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    destination_id INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (destination_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
 );
 
-
 CREATE TABLE reward_points (
-    reward_id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    action_type ENUM('booking', 'review', 'invite', 'bonus') NOT NULL,
-    points INT NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reward_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    action_type TEXT CHECK(action_type IN ('booking', 'review', 'invite', 'bonus')) NOT NULL,
+    points INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
-
 CREATE TABLE messages (
-    message_id INT AUTO_INCREMENT PRIMARY KEY,
-    sender_id INT NOT NULL,
-    receiver_id INT NOT NULL,
+    message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL,
+    receiver_id INTEGER NOT NULL,
     message_text TEXT NOT NULL,
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    is_read BOOLEAN DEFAULT FALSE,
+    sent_at TEXT DEFAULT (datetime('now')),
+    is_read INTEGER DEFAULT 0,
     FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (receiver_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
-
 CREATE TABLE group_chat (
-    chat_id INT AUTO_INCREMENT PRIMARY KEY,
-    group_id INT NOT NULL,
-    sender_id INT NOT NULL,
+    chat_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
     message TEXT NOT NULL,
-    sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    sent_at TEXT DEFAULT (datetime('now')),
     FOREIGN KEY (group_id) REFERENCES group_trips(group_id) ON DELETE CASCADE,
     FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE CASCADE
 );
 
-
 CREATE TABLE interests (
-    interest_id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE
+    interest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE user_interest_map (
-    user_id INT NOT NULL,
-    interest_id INT NOT NULL,
+    user_id INTEGER NOT NULL,
+    interest_id INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
     FOREIGN KEY (interest_id) REFERENCES interests(interest_id) ON DELETE CASCADE
 );
+    """
 
+    cursor.executescript(schema_sqlite)
+    conn.commit()
+    conn.close()
 
-
-
-
-
-
-
-
-
-
-
+# Κάλεσέ το αν θέλεις να εκτελεστεί όταν τρέχει το αρχείο
+if __name__ == "__main__":
+    init_db()
+    print("Η βάση δεδομένων αρχικοποιήθηκε επιτυχώς.")
