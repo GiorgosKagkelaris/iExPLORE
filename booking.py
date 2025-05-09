@@ -30,6 +30,11 @@ class BookingApp:
 
     def show_trips(self):
         selected_category = self.category_var.get()
+        if not selected_category:
+            messagebox.showinfo("Προειδοποίηση", "Πρέπει να επιλέξετε μια κατηγορία ταξιδιού.")
+            # Εμφάνιση γενικών προτάσεων
+            self.show_general_suggestions()
+            return
         category_map = {"Αεροπορικό": "air", "Οδικό": "road", "Κρουαζιέρα": "cruise"}
         category_db_value = category_map.get(selected_category)
 
@@ -43,6 +48,16 @@ class BookingApp:
         if not trips:
             messagebox.showinfo("Διαθέσιμα Ταξίδια", "Δεν υπάρχουν διαθέσιμα ταξίδια για την κατηγορία αυτή.")
             return
+
+        self.show_trip_selection(trips)
+    
+    def show_general_suggestions(self):
+        # Εμφάνιση γενικών προτάσεων
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT trip_id, destination_name, price, start_date, end_date FROM destinations WHERE available_seats > 0")
+        trips = cursor.fetchall()
+        conn.close()
 
         self.show_trip_selection(trips)
 
@@ -60,8 +75,12 @@ class BookingApp:
     def confirm_booking(self, trip):
         trip_id, destination, price, start_date, end_date = trip
         confirm = messagebox.askyesno("Επιβεβαίωση Κράτησης", f"Θέλεις να προχωρήσεις με την κράτηση για το {destination} με κόστος {price} €;")
-
+        
         if confirm:
+            cancel = messagebox.askyesno("Ακύρωση", "Θες να ακυρώσεις την κράτηση;")
+            if cancel:
+                messagebox.showinfo("Ακύρωση", "Η κράτηση ακυρώθηκε.")
+                return
             self.process_payment(trip_id, price)
 
     def process_payment(self, trip_id, amount):
@@ -76,7 +95,11 @@ class BookingApp:
             conn.close()
             messagebox.showinfo("Επιτυχία Κράτησης", "Η κράτηση ολοκληρώθηκε επιτυχώς!")
         except Exception as e:
-            messagebox.showerror("Σφάλμα Κράτησης", f"Σφάλμα κατά την ολοκλήρωση της κράτησης: {e}")
+            retry = messagebox.askretrycancel("Αποτυχία Πληρωμής", f"Η πληρωμή απέτυχε. Θες να προσπαθήσεις ξανά;\nΣφάλμα: {e}")
+            if retry:
+                self.process_payment(trip_id, amount)
+            else:
+                messagebox.showinfo("Ακύρωση", "Η πληρωμή ακυρώθηκε.")
 
 
 if __name__ == "__main__":
