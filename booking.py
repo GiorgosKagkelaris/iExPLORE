@@ -1,9 +1,6 @@
 import tkinter as tk
 from tkinter import messagebox
 import sqlite3
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 import sys
 
 DB_PATH = 'iexplore.db'
@@ -78,31 +75,8 @@ class BookingApp:
             conn.commit()
             conn.close()
             messagebox.showinfo("Επιτυχία Κράτησης", "Η κράτηση ολοκληρώθηκε επιτυχώς!")
-            self.send_confirmation_email(booking_id)
         except Exception as e:
             messagebox.showerror("Σφάλμα Κράτησης", f"Σφάλμα κατά την ολοκλήρωση της κράτησης: {e}")
-
-    def send_confirmation_email(self, booking_id):
-        # Αποστολή Email Επιβεβαίωσης (Dummy Email για σκοπούς ανάπτυξης)
-        try:
-            sender = "your_email@example.com"
-            receiver = "user_email@example.com"
-            subject = "Επιβεβαίωση Κράτησης"
-            body = f"Η κράτησή σας με κωδικό {booking_id} ολοκληρώθηκε επιτυχώς."
-
-            msg = MIMEMultipart()
-            msg['From'] = sender
-            msg['To'] = receiver
-            msg['Subject'] = subject
-            msg.attach(MIMEText(body, 'plain'))
-
-            with smtplib.SMTP('smtp.example.com', 587) as server:
-                server.starttls()
-                server.login(sender, "password")
-                server.sendmail(sender, receiver, msg.as_string())
-
-        except Exception as e:
-            print(f"Σφάλμα αποστολής email: {e}")
 
 
 if __name__ == "__main__":
@@ -119,4 +93,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = BookingApp(root, user_id)
     root.mainloop()
- 
