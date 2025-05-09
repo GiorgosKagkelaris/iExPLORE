@@ -1,136 +1,139 @@
+import sqlite3
 import tkinter as tk
 from tkinter import messagebox
-import sqlite3
+import sys
 
-
-# Database connection
-conn = sqlite3.connect('iexplore.db')
-cursor = conn.cursor()
-
-
-# Κλάση User
-class User:
-    def __init__(self, user_id, email, name):
+class GroupTripManager:
+    def __init__(self, user_id):
         self.user_id = user_id
-        self.email = email
-        self.name = name
 
-    @staticmethod
-    def get_user_by_email(email):
-        cursor.execute("SELECT user_id, email, name FROM users WHERE email = ?", (email,))
-        result = cursor.fetchone()
-        if result:
-            return User(result[0], result[1], result[2])
-        return None
+    def create_group_trip(self, destination, start_date, end_date, cost_per_person):
+        conn = sqlite3.connect("iexplore.db")
+        cursor = conn.cursor()
 
+        cursor.execute(
+            """
+            INSERT INTO group_trips (organizer_id, destination, start_date, end_date, cost_per_person)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (self.user_id, destination, start_date, end_date, cost_per_person)
+        )
 
-# Κλάση Trip
-class Trip:
-    def __init__(self, destination, start_date, end_date, cost_per_person):
-        self.destination = destination
-        self.start_date = start_date
-        self.end_date = end_date
-        self.cost_per_person = cost_per_person
-
-
-# Κλάση GroupTrip (Επεκτείνει την κλάση Trip)
-class GroupTrip(Trip):
-    def __init__(self, organizer_id, destination, start_date, end_date, cost_per_person):
-        super().__init__(destination, start_date, end_date, cost_per_person)
-        self.organizer_id = organizer_id
-        self.group_id = None  # Θα οριστεί μετά την εισαγωγή στη βάση
-        self.members = []
-
-    def save_to_db(self):
-        cursor.execute("INSERT INTO group_trips (organizer_id, destination, start_date, end_date, cost_per_person) VALUES (?, ?, ?, ?, ?)", 
-                       (self.organizer_id, self.destination, self.start_date, self.end_date, self.cost_per_person))
-        self.group_id = cursor.lastrowid
+        group_id = cursor.lastrowid
         conn.commit()
+        conn.close()
+        return group_id
 
-    def add_member(self, user):
-        self.members.append(user)
-        cursor.execute("INSERT INTO group_trip_members (group_id, user_id, status) VALUES (?, ?, 'invited')", 
-                       (self.group_id, user.user_id))
+    def add_participants(self, group_id, participants):
+        conn = sqlite3.connect("iexplore.db")
+        cursor = conn.cursor()
+
+        for participant in participants:
+            cursor.execute(
+                """
+                SELECT user_id FROM users WHERE email = ? OR username = ?
+                """,
+                (participant, participant)
+            )
+            user = cursor.fetchone()
+            if user:
+                user_id = user[0]
+                cursor.execute(
+                    """
+                    INSERT INTO group_trip_members (group_id, user_id, status)
+                    VALUES (?, ?, 'invited')
+                    """,
+                    (group_id, user_id)
+                )
+
         conn.commit()
+        conn.close()
 
-    def send_invitations(self):
-        for user in self.members:
-            Invitation.send_invitation(user, self)
+    def confirm_participation(self, group_id, user_id, confirm=True):
+        conn = sqlite3.connect("iexplore.db")
+        cursor = conn.cursor()
 
+        status = 'confirmed' if confirm else 'declined'
+        cursor.execute(
+            """
+            UPDATE group_trip_members
+            SET status = ?
+            WHERE group_id = ? AND user_id = ?
+            """,
+            (status, group_id, user_id)
+        )
 
-# Κλάση Invitation
-class Invitation:
-    @staticmethod
-    def send_invitation(user, group_trip):
-        # Θα μπορούσε να είναι μια αποστολή email στην πραγματικότητα
-        messagebox.showinfo("Πρόσκληση", f"Η πρόσκληση για το ομαδικό ταξίδι προς {group_trip.destination} έχει σταλεί στον {user.name} ({user.email}).")
+        conn.commit()
+        conn.close()
 
+    def finalize_group_trip(self, group_id):
+        conn = sqlite3.connect("iexplore.db")
+        cursor = conn.cursor()
 
-# Κλάση GroupTripWindow (Εφαρμογή Tkinter)
-class GroupTripWindow:
-    def __init__(self, root):
+        cursor.execute(
+            """
+            SELECT user_id FROM group_trip_members
+            WHERE group_id = ? AND status = 'confirmed'
+            """,
+            (group_id,)
+        )
+        confirmed_members = cursor.fetchall()
+        conn.close()
+        return [member[0] for member in confirmed_members]
+
+class GroupTripUI:
+    def __init__(self, root, user_id):
         self.root = root
-        self.group_window = None
+        self.user_id = user_id
+        self.manager = GroupTripManager(user_id)
+        self.create_ui()
 
-    def open_group_travel(self):
-        if self.group_window is None or not self.group_window.winfo_exists():
-            self.group_window = tk.Toplevel(self.root)
-            self.group_window.title("Οργάνωση Ομαδικού Ταξιδιού")
-            self.group_window.geometry("600x650")
+    def create_ui(self):
+        self.root.title("Οργάνωση Ομαδικού Ταξιδιού")
+        self.root.geometry("600x400")
 
-            # Input Fields
-            tk.Label(self.group_window, text="Emails συμμετεχόντων (διαχωρίστε με κόμμα)").pack()
-            self.emails_entry = tk.Entry(self.group_window, width=50)
-            self.emails_entry.pack()
+        tk.Label(self.root, text="Δημιουργία Ομαδικού Ταξιδιού", font=("Arial", 16)).pack(pady=10)
 
-            tk.Label(self.group_window, text="Προορισμός").pack()
-            self.destination_entry = tk.Entry(self.group_window, width=50)
-            self.destination_entry.pack()
+        self.destination_entry = tk.Entry(self.root)
+        self.destination_entry.pack(pady=5)
+        self.destination_entry.insert(0, "Προορισμός")
 
-            tk.Label(self.group_window, text="Ημερομηνία Έναρξης (YYYY-MM-DD)").pack()
-            self.start_date_entry = tk.Entry(self.group_window, width=50)
-            self.start_date_entry.pack()
+        self.start_date_entry = tk.Entry(self.root)
+        self.start_date_entry.pack(pady=5)
+        self.start_date_entry.insert(0, "Ημερομηνία Έναρξης (YYYY-MM-DD)")
 
-            tk.Label(self.group_window, text="Ημερομηνία Λήξης (YYYY-MM-DD)").pack()
-            self.end_date_entry = tk.Entry(self.group_window, width=50)
-            self.end_date_entry.pack()
+        self.end_date_entry = tk.Entry(self.root)
+        self.end_date_entry.pack(pady=5)
+        self.end_date_entry.insert(0, "Ημερομηνία Λήξης (YYYY-MM-DD)")
 
-            send_button = tk.Button(self.group_window, text="Δημιουργία Ομαδικού Ταξιδιού", command=self.create_group_trip)
-            send_button.pack(pady=10)
+        self.cost_entry = tk.Entry(self.root)
+        self.cost_entry.pack(pady=5)
+        self.cost_entry.insert(0, "Κόστος ανά άτομο")
 
-    def create_group_trip(self):
-        emails = self.emails_entry.get().split(",")
+        self.participants_entry = tk.Entry(self.root)
+        self.participants_entry.pack(pady=5)
+        self.participants_entry.insert(0, "Emails/ Usernames (χωρισμένα με κόμμα)")
+
+        tk.Button(self.root, text="Δημιουργία Ταξιδιού", command=self.create_trip).pack(pady=10)
+
+    def create_trip(self):
         destination = self.destination_entry.get()
         start_date = self.start_date_entry.get()
         end_date = self.end_date_entry.get()
+        cost = float(self.cost_entry.get())
+        participants = self.participants_entry.get().split(",")
 
-        organizer_email = "organizer@example.com"  # Για παράδειγμα, το email του οργανωτή
-        organizer = User.get_user_by_email(organizer_email)
-        if not organizer:
-            messagebox.showerror("Σφάλμα", "Ο οργανωτής δεν βρέθηκε.")
-            return
+        group_id = self.manager.create_group_trip(destination, start_date, end_date, cost)
+        self.manager.add_participants(group_id, participants)
 
-        group_trip = GroupTrip(organizer.user_id, destination, start_date, end_date, 100.00)
-        group_trip.save_to_db()
+        messagebox.showinfo("Επιτυχία", "Το ομαδικό ταξίδι δημιουργήθηκε επιτυχώς!")
 
-        for email in emails:
-            user = User.get_user_by_email(email.strip())
-            if user:
-                group_trip.add_member(user)
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Παρακαλώ, δώστε user_id ως όρισμα.")
+        sys.exit(1)
 
-        group_trip.send_invitations()
-        messagebox.showinfo("Ομαδικό Ταξίδι", "Η ομαδική κράτηση δημιουργήθηκε και οι προσκλήσεις στάλθηκαν!")
-
-
-# Main window
-root = tk.Tk()
-root.title("Διαχείριση Ταξιδιών - Αρχικό Μενού")
-
-group_trip_window = GroupTripWindow(root)
-
-# Button for Group Trip
-group_trip_button = tk.Button(root, text="Οργάνωση Ομαδικού Ταξιδιού", command=group_trip_window.open_group_travel, width=40, height=2)
-group_trip_button.pack(pady=5)
-
-root.mainloop()
- 
+    user_id = int(sys.argv[1])
+    root = tk.Tk()
+    app = GroupTripUI(root, user_id)
+    root.mainloop()
