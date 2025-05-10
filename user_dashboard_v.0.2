@@ -25,6 +25,7 @@ class TravelApp:
             ("📌 Προτάσεις Προορισμών", self.recommend_destinations),
             ("📅 Διαχείριση Κρατήσεων", self.manage_bookings),
             ("📖 Ημερολόγιο Ταξιδιών", self.travel_journal),
+            ("   Δημιουργία Πλάνου", self.trip_plan),
             ("🌍 Κοινοποίηση Εμπειριών", self.share_experiences),
             ("💬 Μηνύματα & Ειδοποιήσεις", self.messages_notifications),
             ("⚙️ Ρυθμίσεις Λογαριασμού", self.account_settings),
@@ -46,7 +47,10 @@ class TravelApp:
         messagebox.showinfo("📅 Κρατήσεις", "Διαχείριση κρατήσεων ταξιδιών.")
 
     def travel_journal(self):
-        subprocess.Popen(["python", "travel_history.py", str(self.user_id)])
+        subprocess.Popen([sys.executable, "travel_history.py", str(self.user_id)])
+
+    def trip_plan(self):
+        subprocess.Popen([sys.executable, "trip_plan.py", str(self.user_id)])
 
     def share_experiences(self):
         messagebox.showinfo("🌍 Εμπειρίες", "Μοιράσου τις ταξιδιωτικές σου εμπειρίες!")
