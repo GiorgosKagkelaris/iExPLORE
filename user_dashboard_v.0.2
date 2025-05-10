@@ -38,7 +38,7 @@ class TravelApp:
             btn.pack(pady=5)
 
     def search_destinations(self):
-        messagebox.showinfo("🔍 Αναζήτηση", "Λειτουργία αναζήτησης προορισμών.")
+        subprocess.Popen([sys.executable, "booking.py", str(self.user_id)])
 
     def recommend_destinations(self):
         messagebox.showinfo("📌 Προτάσεις", "Εξατομικευμένες προτάσεις προορισμών.")
