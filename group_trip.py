@@ -49,78 +49,55 @@ class GroupTripManager:
         conn.commit()
         conn.close()
 
-    def confirm_participation(self, group_id, user_id, confirm=True):
-        conn = sqlite3.connect("iexplore.db")
-        cursor = conn.cursor()
-
-        status = 'confirmed' if confirm else 'declined'
-        cursor.execute(
-            """
-            UPDATE group_trip_members
-            SET status = ?
-            WHERE group_id = ? AND user_id = ?
-            """,
-            (status, group_id, user_id)
-        )
-
-        conn.commit()
-        conn.close()
-
-    def finalize_group_trip(self, group_id):
-        conn = sqlite3.connect("iexplore.db")
-        cursor = conn.cursor()
-
-        cursor.execute(
-            """
-            SELECT user_id FROM group_trip_members
-            WHERE group_id = ? AND status = 'confirmed'
-            """,
-            (group_id,)
-        )
-        confirmed_members = cursor.fetchall()
-        conn.close()
-        return [member[0] for member in confirmed_members]
-
 class GroupTripUI:
     def __init__(self, root, user_id):
         self.root = root
         self.user_id = user_id
         self.manager = GroupTripManager(user_id)
+        self.root.title("Οργάνωση Ομαδικού Ταξιδιού - iExplore")
+        self.root.geometry("600x650")
+        self.root.config(bg="#f0f8ff")
+
         self.create_ui()
 
     def create_ui(self):
-        self.root.title("Οργάνωση Ομαδικού Ταξιδιού")
-        self.root.geometry("600x400")
+        tk.Label(self.root, text="Οργάνωση Ομαδικού Ταξιδιού", font=("Helvetica", 16, "bold"), bg="#f0f8ff").pack(pady=10)
 
-        tk.Label(self.root, text="Δημιουργία Ομαδικού Ταξιδιού", font=("Arial", 16)).pack(pady=10)
+        frame = tk.Frame(self.root, bg="#f0f8ff")
+        frame.pack(pady=10)
 
-        self.destination_entry = tk.Entry(self.root)
-        self.destination_entry.pack(pady=5)
+        self.destination_entry = tk.Entry(frame, width=40)
         self.destination_entry.insert(0, "Προορισμός")
+        self.destination_entry.grid(row=0, column=0, pady=5)
 
-        self.start_date_entry = tk.Entry(self.root)
-        self.start_date_entry.pack(pady=5)
+        self.start_date_entry = tk.Entry(frame, width=40)
         self.start_date_entry.insert(0, "Ημερομηνία Έναρξης (YYYY-MM-DD)")
+        self.start_date_entry.grid(row=1, column=0, pady=5)
 
-        self.end_date_entry = tk.Entry(self.root)
-        self.end_date_entry.pack(pady=5)
+        self.end_date_entry = tk.Entry(frame, width=40)
         self.end_date_entry.insert(0, "Ημερομηνία Λήξης (YYYY-MM-DD)")
+        self.end_date_entry.grid(row=2, column=0, pady=5)
 
-        self.cost_entry = tk.Entry(self.root)
-        self.cost_entry.pack(pady=5)
+        self.cost_entry = tk.Entry(frame, width=40)
         self.cost_entry.insert(0, "Κόστος ανά άτομο")
+        self.cost_entry.grid(row=3, column=0, pady=5)
 
-        self.participants_entry = tk.Entry(self.root)
-        self.participants_entry.pack(pady=5)
+        self.participants_entry = tk.Entry(frame, width=40)
         self.participants_entry.insert(0, "Emails/ Usernames (χωρισμένα με κόμμα)")
+        self.participants_entry.grid(row=4, column=0, pady=5)
 
-        tk.Button(self.root, text="Δημιουργία Ταξιδιού", command=self.create_trip).pack(pady=10)
+        tk.Button(frame, text="Δημιουργία Ομαδικού Ταξιδιού", command=self.create_trip, bg="#e6f2ff", fg="#333", font=("Arial", 10), width=40).grid(row=5, column=0, pady=10)
 
     def create_trip(self):
         destination = self.destination_entry.get()
         start_date = self.start_date_entry.get()
         end_date = self.end_date_entry.get()
-        cost = float(self.cost_entry.get())
+        try:
+            cost = float(self.cost_entry.get())
+        except ValueError:
+            messagebox.showerror("Σφάλμα", "Το κόστος πρέπει να είναι αριθμός.")
+            return
+
         participants = self.participants_entry.get().split(",")
 
         group_id = self.manager.create_group_trip(destination, start_date, end_date, cost)
