@@ -26,9 +26,10 @@ class TravelApp:
             ("📅 Διαχείριση Κρατήσεων", self.manage_bookings),
             ("📖 Ημερολόγιο Ταξιδιών", self.travel_journal),
             ("   Δημιουργία Πλάνου", self.trip_plan),
+            ("   Κοινωνική Αλληλεπίδραση", self.interaction),
             ("🌍 Κοινοποίηση Εμπειριών", self.share_experiences),
             ("💬 Μηνύματα & Ειδοποιήσεις", self.messages_notifications),
-            ("⚙️ Ρυθμίσεις Λογαριασμού", self.account_settings),
+            ("⚙️ Ρυθμίσεις Προφίλ", self.profile_and_preferences),
             ("🚪 Αποσύνδεση", self.logout)
         ]
 
@@ -55,11 +56,14 @@ class TravelApp:
     def share_experiences(self):
         messagebox.showinfo("🌍 Εμπειρίες", "Μοιράσου τις ταξιδιωτικές σου εμπειρίες!")
 
+    def interaction(self):
+        subprocess.Popen([sys.executable, "interaction.py", str(self.user_id)])
+
     def messages_notifications(self):
         messagebox.showinfo("💬 Μηνύματα", "Ειδοποιήσεις & μηνύματα.")
 
-    def account_settings(self):
-        messagebox.showinfo("⚙️ Ρυθμίσεις", "Ρυθμίσεις λογαριασμού.")
+    def profile_and_preferences(self):
+        subprocess.Popen([sys.executable, "profile_and_preferences.py", str(self.user_id)])
 
     def logout(self):
         confirm = messagebox.askyesno("Αποσύνδεση", "Είσαι σίγουρος ότι θέλεις να αποσυνδεθείς;")
