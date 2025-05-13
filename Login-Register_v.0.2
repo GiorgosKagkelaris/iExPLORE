@@ -44,21 +44,25 @@ def login_user(username, password):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    cursor.execute("SELECT user_id, password_hash FROM users WHERE username = ?", (username,))
+    cursor.execute("SELECT user_id, password_hash, role FROM users WHERE username = ?", (username,))
     user = cursor.fetchone()
     conn.close()
 
     if user and bcrypt.checkpw(password.encode("utf-8"), user[1].encode("utf-8")):
+        user_id, _, role = user
         messagebox.showinfo("Σύνδεση", f"Καλώς ήρθες, {username}!")
 
-        # Εκκίνηση του user_dashboard.py
         try:
-            subprocess.Popen([sys.executable, "user_dashboard.py", str(user[0])])
-            tk._default_root.destroy()  # Κλείνει το παράθυρο login
+            # Επιλέγει το κατάλληλο αρχείο dashboard
+            dashboard_file = "admin_dashboard.py" if role == "admin" else "user_dashboard.py"
+            subprocess.run(["python", "admin_dashboard.py", username]) if role =="admin" else subprocess.Popen([sys.executable, dashboard_file, str(user_id)])
+
+            tk._default_root.destroy()  # Κλείσιμο του παραθύρου σύνδεσης
         except Exception as e:
-            messagebox.showerror("Σφάλμα", f"Αποτυχία εκκίνησης user_dashboard.py:\n{e}")
+            messagebox.showerror("Σφάλμα", f"Αποτυχία εκκίνησης {dashboard_file}:\n{e}")
     else:
         messagebox.showerror("Σφάλμα", "Λάθος username ή password")
+
 
 
 # --- GUI Εγγραφής ---
