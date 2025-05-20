@@ -29,7 +29,7 @@ class AdminDashboard:
         form_frame.pack(pady=10)
 
         tk.Label(form_frame, text="Τύπος Περιεχομένου:", bg="#f0f8ff").grid(row=0, column=0, sticky="w")
-        self.content_type = ttk.Combobox(form_frame, values=["destination", "activity", "offer", "guide"])
+        self.content_type = ttk.Combobox(form_frame, values=["Προορισμός", "Δραστηριότητα", "Προσφορά", "Οδηγός"])
         self.content_type.grid(row=0, column=1)
 
         tk.Label(form_frame, text="Όνομα:", bg="#f0f8ff").grid(row=1, column=0, sticky="w")
