@@ -51,10 +51,18 @@ class AdminDashboard:
         btn_frame = tk.Frame(self.root, bg="#f0f8ff")
         btn_frame.pack(pady=20)
 
-        publish_btn = tk.Button(btn_frame, text="Δημοσίευση", command=self.publish_content, bg="#4caf50", fg="white", width=15)
+        button_style = {
+            "width": 30,
+            "height": 2,
+            "bg": "#e6f2ff",
+            "fg": "#333",
+            "font": ("Arial", 10)
+        }
+
+        publish_btn = tk.Button(btn_frame, text="Δημοσίευση", command=self.publish_content, **button_style)
         publish_btn.grid(row=0, column=0, padx=10)
 
-        draft_btn = tk.Button(btn_frame, text="Αποθήκευση ως Πρόχειρο", command=self.save_as_draft, bg="#2196f3", fg="white", width=20)
+        draft_btn = tk.Button(btn_frame, text="Αποθήκευση ως Πρόχειρο", command=self.save_as_draft, **button_style)
         draft_btn.grid(row=0, column=1, padx=10)
 
     def validate_fields(self):
@@ -115,7 +123,6 @@ class AdminDashboard:
         self.location_entry.delete(0, tk.END)
         self.price_entry.delete(0, tk.END)
         self.content_type.set("")
-
 
 if __name__ == "__main__":
     root = tk.Tk()
