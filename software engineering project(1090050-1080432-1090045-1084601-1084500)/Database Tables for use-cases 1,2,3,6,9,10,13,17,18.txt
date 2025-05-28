@@ -1,0 +1,259 @@
+import sqlite3
+
+def init_db():
+    conn = sqlite3.connect("iexplore.db")
+    cursor = conn.cursor()
+
+    cursor.execute("PRAGMA foreign_keys = ON;")
+
+    schema_sqlite = """
+    CREATE TABLE IF NOT EXISTS users (
+        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT NOT NULL UNIQUE,
+        email TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT CHECK(role IN ('user', 'admin')) DEFAULT 'user',
+        created_at TEXT DEFAULT (datetime('now'))
+    );
+
+    CREATE TABLE IF NOT EXISTS administrators (
+        administrator_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        admin_role TEXT CHECK(admin_role IN ('superadmin', 'moderator')) NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS members (
+        member_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        membership_type TEXT CHECK(membership_type IN ('standard', 'premium')) DEFAULT 'standard',
+        join_date TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS destinations (
+        trip_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        destination_name TEXT NOT NULL,
+        category TEXT CHECK(category IN ('air', 'road', 'cruise')) NOT NULL,
+        description TEXT,
+        price REAL NOT NULL CHECK(price >= 0),
+        available_seats INTEGER NOT NULL CHECK(available_seats >= 0),
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS travel_offers (
+        offer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        trip_id INTEGER NOT NULL,
+        destination TEXT NOT NULL,
+        price REAL NOT NULL CHECK (price >= 0),
+        available_seats INTEGER NOT NULL CHECK (available_seats >= 0),
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        created_by INTEGER,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(user_id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS bookings (
+        booking_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        offer_id INTEGER NOT NULL,
+        status TEXT CHECK(status IN ('pending', 'confirmed', 'cancelled')) DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (offer_id) REFERENCES travel_offers(offer_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS payments (
+        payment_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER NOT NULL,
+        amount REAL NOT NULL CHECK(amount >= 0),
+        payment_status TEXT CHECK(payment_status IN ('paid', 'pending', 'failed')) DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS wishlist (
+        wishlist_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        trip_id INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS trip_reviews (
+        review_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        trip_id INTEGER NOT NULL,
+        rating INTEGER CHECK(rating BETWEEN 1 AND 5) NOT NULL,
+        comment TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS travel_plans (
+        plan_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
+        destination TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS group_trips (
+        group_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        organizer_id INTEGER NOT NULL,
+        destination TEXT NOT NULL,
+        start_date TEXT NOT NULL,
+        end_date TEXT NOT NULL,
+        cost_per_person REAL NOT NULL CHECK(cost_per_person >= 0),
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (organizer_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS group_trip_members (
+        group_member_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        group_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        status TEXT CHECK(status IN ('invited', 'confirmed', 'declined')) DEFAULT 'invited',
+        FOREIGN KEY (group_id) REFERENCES group_trips(group_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS user_preferences (
+        preference_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        preferred_destinations TEXT,
+        dietary_preferences TEXT,
+        accommodation_type TEXT CHECK(accommodation_type IN ('hotel', 'hostel', 'apartment', 'resort')) DEFAULT 'hotel',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS travel_posts (
+        post_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        trip_id INTEGER NOT NULL,
+        content TEXT NOT NULL,
+        image_url TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+        FOREIGN KEY (trip_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS post_interactions (
+        interaction_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        type TEXT CHECK(type IN ('like', 'comment')) NOT NULL,
+        comment_text TEXT,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (post_id) REFERENCES travel_posts(post_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS content_reports (
+        report_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        post_id INTEGER NOT NULL,
+        reported_by INTEGER NOT NULL,
+        reason TEXT NOT NULL,
+        status TEXT CHECK(status IN ('pending', 'reviewed', 'resolved')) DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (post_id) REFERENCES travel_posts(post_id) ON DELETE CASCADE,
+        FOREIGN KEY (reported_by) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS admin_content (
+        content_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        admin_id INTEGER NOT NULL,
+        type TEXT CHECK(type IN ('destination', 'activity', 'offer', 'guide')) NOT NULL,
+        title TEXT NOT NULL,
+        description TEXT NOT NULL,
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (admin_id) REFERENCES administrators(administrator_id) ON DELETE CASCADE
+    );
+
+    CREATE TABLE IF NOT EXISTS calendar_sync (
+        sync_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        booking_id INTEGER NOT NULL,
+        user_id INTEGER NOT NULL,
+        calendar_service TEXT CHECK(calendar_service IN ('google_calendar', 'iCal')) NOT NULL,
+        event_id TEXT NOT NULL,
+        sync_status TEXT CHECK(sync_status IN ('synchronized', 'pending', 'failed')) DEFAULT 'pending',
+        created_at TEXT DEFAULT (datetime('now')),
+        FOREIGN KEY (booking_id) REFERENCES bookings(booking_id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    );
+    
+    CREATE TABLE notifications (
+    notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT CHECK(type IN ('reminder', 'offer', 'alert', 'system')) NOT NULL,
+    is_read INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_interests (
+    interest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    destination_id INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (destination_id) REFERENCES destinations(trip_id) ON DELETE CASCADE
+);
+
+CREATE TABLE reward_points (
+    reward_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    action_type TEXT CHECK(action_type IN ('booking', 'review', 'invite', 'bonus')) NOT NULL,
+    points INTEGER NOT NULL,
+    created_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE messages (
+    message_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL,
+    receiver_id INTEGER NOT NULL,
+    message_text TEXT NOT NULL,
+    sent_at TEXT DEFAULT (datetime('now')),
+    is_read INTEGER DEFAULT 0,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (receiver_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE group_chat (
+    chat_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    group_id INTEGER NOT NULL,
+    sender_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    sent_at TEXT DEFAULT (datetime('now')),
+    FOREIGN KEY (group_id) REFERENCES group_trips(group_id) ON DELETE CASCADE,
+    FOREIGN KEY (sender_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE interests (
+    interest_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE
+);
+
+CREATE TABLE user_interest_map (
+    user_id INTEGER NOT NULL,
+    interest_id INTEGER NOT NULL,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    FOREIGN KEY (interest_id) REFERENCES interests(interest_id) ON DELETE CASCADE
+);
+    """
+
+    cursor.executescript(schema_sqlite)
+    conn.commit()
+    conn.close()
+
+# Κάλεσέ το αν θέλεις να εκτελεστεί όταν τρέχει το αρχείο
+if __name__ == "__main__":
+    init_db()
+    print("Η βάση δεδομένων αρχικοποιήθηκε επιτυχώς.")
